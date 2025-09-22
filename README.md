@@ -4,9 +4,19 @@ Este projeto tem como objetivo desenvolver uma aplicação paralela utilizando M
 
 ## Desafios
 
-1. **Contagem de Palavras:** Contar o número total de palavras no dataset de forma paralela.
-2. **Classificação de Sentimento:** Utilizar um modelo de linguagem (Python) para classificar o sentimento das músicas.
-3. **Estatísticas Avançadas:** Gerar estatísticas como média de palavras por música, artista mais prolífico, etc.
+1. **Contagem de Palavras nas Letras (40%)**
+   - Contar a aparição de cada palavra presente nas letras das músicas do dataset.
+   - O processamento será realizado em paralelo para otimizar o desempenho.
+
+2. **Artistas com Mais Músicas (40%)**
+   - Identificar os artistas que possuem a maior quantidade de músicas no dataset.
+   - Utilizar MPI para distribuir a análise entre múltiplos processos.
+
+3. **Classificação de Letras (20%)**
+   - Classificar cada letra de música como "Positiva", "Neutra" ou "Negativa".
+   - Integrar a aplicação C/MPI com um modelo local de linguagem (LLM), utilizando Python para a chamada do modelo.
+   - Ferramentas como [Ollama](https://ollama.com) podem ser utilizadas para executar o LLM localmente.
+   - Após a classificação, contar o total de músicas em cada classe.
 
 ## Tecnologias Utilizadas
 
@@ -16,19 +26,15 @@ Este projeto tem como objetivo desenvolver uma aplicação paralela utilizando M
 
 ## Como Executar
 
-1. Baixe o dataset do Kaggle e coloque em `utils/spotify_millsongdata.csv`.
-2. Compile o código C com suporte a MPI:
-   ```sh
-   mpicc -o word-counter src/word-counter.c
-   mpicc -o aaaaa src/aaaaa.c
-   ```
+1. Baixe o dataset do Kaggle.
+2. Compile o código C com suporte a MPI.
 3. Execute os scripts conforme instruções específicas de cada desafio.
 4. Para a classificação, certifique-se de ter o modelo de linguagem local configurado e o Python instalado.
 
 ## Estrutura do Projeto
 
 - `src/` - Código fonte em C e scripts auxiliares em Python.
-- `utils/` - Dataset do Spotify.
+- `data/` - Dataset do Spotify.
 - `README.md` - Documentação do projeto.
 
 ## Contribuição
