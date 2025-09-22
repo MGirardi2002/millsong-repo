@@ -1,59 +1,55 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <mpi.h>
 
 #define MAX_LINE 4096
+#define MAX_WORD_LEN 100
+#define MAX_UNIQUE_WORDS 50000
 
-int count_words(const char *line) {
-    int count = 0;
-    int in_word = 0;
-    for (int i = 0; line[i]; i++) {
-        if ((line[i] != ' ') && (line[i] != '\n') && (line[i] != ',')) {
-            if (!in_word) {
-                count++;
-                in_word = 1;
+typedef struct {
+    char word[MAX_WORD_LEN];
+    int count;
+} WordCount;
+
+// Função para encontrar uma palavra na lista de palavras únicas
+int find_word(WordCount *words, int num_words, const char *word) {
+    for (int i = 0; i < num_words; i++) {
+        if (strcmp(words[i].word, word) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// ... (resto do código MPI, main, etc.)
+
+// Dentro do loop de leitura de cada processo:
+while (fgets(line, sizeof(line), file)) {
+    if (line_count++ % size != rank) continue;
+
+    char *lyrics = get_lyrics(line); // Função para pegar só a coluna de letra
+    if (lyrics) {
+        char *token = strtok(lyrics, " \\n\\r\\t,.;:!?()[]{}\\\""); // Separadores
+        while (token != NULL) {
+            // Converte para minúsculo
+            for (int i = 0; token[i]; i++) {
+                token[i] = tolower(token[i]);
             }
-        } else {
-            in_word = 0;
+
+            int idx = find_word(local_words, local_num_words, token);
+            if (idx != -1) {
+                local_words[idx].count++;
+            } else if (local_num_words < MAX_UNIQUE_WORDS) {
+                strncpy(local_words[local_num_words].word, token, MAX_WORD_LEN - 1);
+                local_words[local_num_words].word[MAX_WORD_LEN - 1] = '\\0';
+                local_words[local_num_words].count = 1;
+                local_num_words++;
+            }
+            token = strtok(NULL, " \\n\\r\\t,.;:!?()[]{}\\\"");
         }
     }
-    return count;
 }
 
-int main(int argc, char *argv[]) {
-    MPI_Init(&argc, &argv);
-
-    int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-    FILE *file = fopen("../utils/spotify_millsongdata.csv", "r");
-    if (!file) {
-        if (rank == 0) printf("Erro ao abrir o arquivo.\n");
-        MPI_Finalize();
-        return 1;
-    }
-
-    int local_count = 0;
-    char line[MAX_LINE];
-    int line_num = 0;
-
-    while (fgets(line, MAX_LINE, file)) {
-        if (line_num % size == rank) {
-            local_count += count_words(line);
-        }
-        line_num++;
-    }
-    fclose(file);
-
-    int total_count = 0;
-    MPI_Reduce(&local_count, &total_count, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-
-    if (rank == 0) {
-        printf("Total de palavras: %d\n", total_count);
-    }
-
-    MPI_Finalize();
-    return 0;
-}
+// ... (depois, usar MPI_Gather e MPI_Reduce para juntar os resultados)
