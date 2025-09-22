@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
             if (final_artists[i].count > max_count) {
                 max_count = final_artists[i].count;
             }
-        }
+        }   
         
         printf("Artista(s) com mais músicas (%d músicas):\n", max_count);
         for (int i = 0; i < final_num_artists; i++) {
