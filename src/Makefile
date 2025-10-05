@@ -1,39 +1,57 @@
-# Compiler
-CC = mpicc
+# ================================
+# Projeto: Spotify MPI Analyser
+# ================================
 
-# Compiler flags
-# -Wall: Enable all warnings
-# -O2: Optimization level 2
-CFLAGS = -Wall -O2
+CC      = mpicc
+CFLAGS  = -Wall -O2
 
-# Executable name
-EXEC = spotify_analyzer
+# Fontes e executáveis
+SRC_WORDS   = word_counter.c
+SRC_ARTISTS = artist_counter.c
 
-# Source file
-SRC = spotify_analyzer.c
+EXEC_WORDS   = word_counter
+EXEC_ARTISTS = artist_counter
 
-# Number of processes for mpirun (default is 4)
+# Caminho pro CSV limpo
+CSV_PATH = ../utils/spotify_cleaned.csv
+
+# Número de processos padrão
 NP ?= 4
 
-# Default target: builds the executable
-all: $(EXEC)
+# ================================
+# Compilação
+# ================================
 
-# Rule to build the executable from the source file
-$(EXEC): $(SRC)
-	$(CC) $(CFLAGS) -o $(EXEC) $(SRC)
+all: $(EXEC_WORDS) $(EXEC_ARTISTS)
 
-# Target to run the application
-# Usage: make run
-# or to specify the number of processes: make run NP=8
-run: all
-	@echo "Running $(EXEC) with $(NP) processes..."
-	@mpirun -n $(NP) ./$(EXEC)
+$(EXEC_WORDS): $(SRC_WORDS)
+	@echo "Compilando $@..."
+	$(CC) $(CFLAGS) -o $@ $<
 
-# Target to clean up the build files
-# Removes the executable
+$(EXEC_ARTISTS): $(SRC_ARTISTS)
+	@echo "Compilando $@..."
+	$(CC) $(CFLAGS) -o $@ $<
+
+# ================================
+# Execução
+# ================================
+
+run_words: $(EXEC_WORDS)
+	@echo "Executando $(EXEC_WORDS) com $(NP) processos..."
+	@mpirun -np $(NP) ./$(EXEC_WORDS) $(CSV_PATH) > ../out/out_palavras.txt
+	@echo "Saída salva em ../out/out_palavras.txt"
+
+run_artists: $(EXEC_ARTISTS)
+	@echo "Executando $(EXEC_ARTISTS) com $(NP) processos..."
+	@mpirun -np $(NP) ./$(EXEC_ARTISTS) $(CSV_PATH) > ../out/out_artistas.txt
+	@echo "Saída salva em ../out/out_artistas.txt"
+
+# ================================
+# Limpeza
+# ================================
+
 clean:
-	@echo "Cleaning up..."
-	rm -f $(EXEC)
+	@echo "Removendo executáveis..."
+	rm -f $(EXEC_WORDS) $(EXEC_ARTISTS)
 
-# Phony targets are not files
-.PHONY: all run clean
+.PHONY: all run_words run_artists clean
