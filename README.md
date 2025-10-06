@@ -42,3 +42,54 @@ O projeto processa o dataset do Spotify para extrair informações em paralelo:
    │   └── out_artistas.txt          
    ├── README.md                     
    └── .venv/   
+
+   ## 🚀 Execução Passo a Passo
+
+### 1️⃣ Instalar dependências no WSL/Ubuntu
+
+```
+sudo apt update
+sudo apt install -y build-essential make openmpi-bin libopenmpi-dev python3 python3-venv python-is-python3
+```
+
+### 2️⃣ Limpar o dataset original
+
+Entre na pasta `utils` e execute o script:
+
+```
+python3 limpar_csv.py
+```
+Isso gera o arquivo `spotify_cleaned.csv` a partir do `spotify_millsongdata.csv`.
+
+### 3️⃣ Compilar os programas MPI
+Entre na pasta `src` e execute:
+
+```
+make
+```
+
+Isso cria dois executáveis: `word_counter` e `artist_counter`.
+
+### 4️⃣ Executar os programas MPI
+Para contar palavras:
+
+```
+make run_words NP=4
+```
+Para contar artistas:
+
+```
+make run_artists NP=4
+```
+Os resultados são salvos na pasta `out/`.
+
+Para gerar as duas saídas simultaneamente:
+
+```
+make run_all NP=4
+```
+### 5️⃣ Limpar os binários
+
+```
+make clean
+```
