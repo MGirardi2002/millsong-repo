@@ -8,7 +8,6 @@
 #define MAX_NAME 512
 #define MAX_LINE 8192
 
-// estrutura básica da hash
 typedef struct Node {
     char name[MAX_NAME];
     int count;
@@ -19,11 +18,6 @@ typedef struct {
     Node** table;
 } HashTable;
 
-// ---------------------------
-// Funções de hash
-// ---------------------------
-
-// hash djb2
 unsigned long hash(const char* str) {
     unsigned long h = 5381;
     int c;
@@ -31,14 +25,12 @@ unsigned long hash(const char* str) {
     return h % HASH_SIZE;
 }
 
-// cria tabela hash
 HashTable* ht_create() {
     HashTable* ht = malloc(sizeof(HashTable));
     ht->table = calloc(HASH_SIZE, sizeof(Node*));
     return ht;
 }
 
-// insere +1
 void ht_insert(HashTable* ht, const char* key) {
     unsigned long idx = hash(key);
     Node* cur = ht->table[idx];
@@ -57,7 +49,6 @@ void ht_insert(HashTable* ht, const char* key) {
     ht->table[idx] = n;
 }
 
-// adiciona soma direta (usado no merge)
 void ht_add(HashTable* ht, const char* key, int inc) {
     unsigned long idx = hash(key);
     Node* cur = ht->table[idx];
@@ -76,7 +67,6 @@ void ht_add(HashTable* ht, const char* key, int inc) {
     ht->table[idx] = n;
 }
 
-// libera memória
 void ht_free(HashTable* ht) {
     for (int i = 0; i < HASH_SIZE; i++) {
         Node* cur = ht->table[i];
@@ -86,25 +76,17 @@ void ht_free(HashTable* ht) {
     free(ht);
 }
 
-// ---------------------------
-// Parsing do CSV
-// ---------------------------
-
-// extrai o campo "artist" (1ª coluna, com aspas)
 int extrair_artista(const char *linha, char *artista_out) {
     int i = 0, j = 0;
 
-    // pula espaços e quebras de linha no começo
     while (linha[i] && isspace((unsigned char)linha[i])) i++;
 
-    // o campo deve começar com aspas
     if (linha[i] != '"') return -1;
     i++;
 
-    // copia até a aspa final
     while (linha[i] && j < MAX_NAME - 1) {
         if (linha[i] == '"') {
-            if (linha[i + 1] == '"') { // aspas duplas internas
+            if (linha[i + 1] == '"') {
                 artista_out[j++] = '"';
                 i += 2;
             } else break;
@@ -113,26 +95,19 @@ int extrair_artista(const char *linha, char *artista_out) {
         }
     }
 
-    artista_out[j] = '\0'; // finaliza string
+    artista_out[j] = '\0';
 
-    // garante que terminou em aspas
     if (linha[i] != '"') return -1;
     i++;
 
-    // remove possíveis vírgulas, espaços e quebras de linha no fim
     while (linha[i] && (linha[i] == ' ' || linha[i] == ',' || linha[i] == '\r' || linha[i] == '\n'))
         i++;
 
-    // trim final
     for (int k = strlen(artista_out) - 1; k >= 0 && isspace((unsigned char)artista_out[k]); k--)
         artista_out[k] = '\0';
 
     return 0;
 }
-
-// ---------------------------
-// Programa principal
-// ---------------------------
 
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
@@ -157,12 +132,11 @@ int main(int argc, char** argv) {
     }
 
     char line[MAX_LINE];
-    (void)fgets(line, MAX_LINE, f); // pula cabeçalho
+    (void)fgets(line, MAX_LINE, f);
 
     HashTable* local = ht_create();
     int line_num = 0;
 
-    // leitura distribuída
     while (fgets(line, MAX_LINE, f)) {
         if (line_num++ % size != rank) continue;
 
@@ -172,19 +146,14 @@ int main(int argc, char** argv) {
     }
     fclose(f);
 
-    // ---------------------------
-    // agregação dos resultados
-    // ---------------------------
     if (rank == 0) {
         HashTable* global = ht_create();
 
-        // junta o próprio hash local
         for (int i = 0; i < HASH_SIZE; i++) {
             Node* cur = local->table[i];
             while (cur) { ht_add(global, cur->name, cur->count); cur = cur->next; }
         }
 
-        // recebe dos outros ranks
         for (int src = 1; src < size; src++) {
             int count;
             MPI_Recv(&count, 1, MPI_INT, src, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -198,7 +167,6 @@ int main(int argc, char** argv) {
             }
         }
 
-        // cria vetor p/ ordenar
         typedef struct { char* n; int c; } Pair;
         Pair* arr = malloc(20000 * sizeof(Pair));
         int n = 0;
@@ -212,14 +180,12 @@ int main(int argc, char** argv) {
             }
         }
 
-        // ordena decrescente
         for (int i = 0; i < n - 1; i++)
             for (int j = i + 1; j < n; j++)
                 if (arr[j].c > arr[i].c) {
                     Pair tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
                 }
 
-        // imprime resultado
         printf("============================================\n");
         printf("    MPI ARTIST COUNTER (resultado final)\n");
         printf("============================================\n");
@@ -231,7 +197,6 @@ int main(int argc, char** argv) {
         ht_free(global);
     } 
     else {
-        // envia pro rank 0
         int total = 0;
         for (int i = 0; i < HASH_SIZE; i++) {
             Node* cur = local->table[i];

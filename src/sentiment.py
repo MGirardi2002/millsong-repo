@@ -3,25 +3,12 @@ import subprocess
 import json
 from collections import Counter
 
-# ------------------------------
-# CONFIGURAÇÕES
-# ------------------------------
-
-CSV_PATH = "utils/spotify_cleaned.csv"
+CSV_PATH = "utils/csv_limpo.csv"
 OUTPUT_PATH = "out/sentiment_summary.txt"
 MODEL_NAME = "llama3" 
-LIMIT = 10           
-
-
-# ------------------------------
-# FUNÇÃO: chama o modelo do Ollama
-# ------------------------------
+LIMIT = 100
 
 def classify_lyrics(lyrics):
-    """
-    Envia a letra para o modelo local do Ollama e retorna a classe:
-    'Positiva', 'Negativa' ou 'Neutra'.
-    """
     prompt = f"""
     Analise o sentimento da letra a seguir e responda apenas com uma palavra:
     'Positiva', 'Negativa' ou 'Neutra'.
@@ -39,7 +26,6 @@ def classify_lyrics(lyrics):
         )
         response = result.stdout.decode("utf-8").strip().capitalize()
 
-        # Normaliza a resposta
         if "pos" in response.lower():
             return "Positiva"
         elif "neg" in response.lower():
@@ -50,10 +36,6 @@ def classify_lyrics(lyrics):
     except Exception as e:
         print(f"Erro ao classificar: {e}")
         return "Neutra"
-
-# ------------------------------
-# PROCESSAMENTO PRINCIPAL
-# ------------------------------
 
 def main():
     counts = Counter()
@@ -74,10 +56,6 @@ def main():
 
             if processed >= LIMIT:
                 break
-
-    # ------------------------------
-    # SALVA RESULTADO FINAL
-    # ------------------------------
 
     total = sum(counts.values())
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:

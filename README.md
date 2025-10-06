@@ -31,12 +31,13 @@ O projeto processa o dataset do Spotify para extrair informações em paralelo:
    millsong-repo/
    ├── src/                         
    │   ├── artist_counter.c          
-   │   ├── word_counter.c                 
+   │   ├── word_counter.c            
+   |   ├── sentiment.py
    │   └── Makefile                 
    ├── utils/                      
    │   ├── limpar_csv.py                  
    |   ├── spotify_millsongdata.csv
-   |   └── spotify_cleaned.csv                        
+   |   └── csv_limpo.csv                        
    ├── out/                         
    │   ├── out_palavras.txt          
    │   └── out_artistas.txt          
@@ -59,7 +60,7 @@ Entre na pasta `utils` e execute o script:
 ```
 python3 limpar_csv.py
 ```
-Isso gera o arquivo `spotify_cleaned.csv` a partir do `spotify_millsongdata.csv`.
+Isso gera o arquivo `csv_limpo.csv` a partir do `spotify_millsongdata.csv`.
 
 ### 3️⃣ Compilar os programas MPI
 Entre na pasta `src` e execute:
@@ -83,11 +84,6 @@ make run_artists NP=4
 ```
 Os resultados são salvos na pasta `out/`.
 
-Para gerar as duas saídas simultaneamente:
-
-```
-make run_all NP=4
-```
 ### 5️⃣ Limpar os binários
 
 ```
@@ -103,7 +99,7 @@ para classificar as letras das músicas em três categorias:
 - **Negativa**
 - **Neutra**
 
-O script lê o arquivo `spotify_cleaned.csv`, envia as letras para o modelo local  
+O script lê o arquivo `csv_limpo.csv`, envia as letras para o modelo local  
 e conta quantas músicas se enquadram em cada classe.
 
 ---
@@ -122,6 +118,3 @@ e conta quantas músicas se enquadram em cada classe.
    ```
 
  ## 🚀 Executando a classificação
-
-
-

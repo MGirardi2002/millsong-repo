@@ -18,7 +18,6 @@ typedef struct {
     Node** table;
 } HashTable;
 
-// hash djb2
 unsigned long hash(const char* str) {
     unsigned long h = 5381;
     int c;
@@ -26,14 +25,12 @@ unsigned long hash(const char* str) {
     return h % HASH_SIZE;
 }
 
-// cria hash
 HashTable* ht_create() {
     HashTable* ht = malloc(sizeof(HashTable));
     ht->table = calloc(HASH_SIZE, sizeof(Node*));
     return ht;
 }
 
-// insere +1
 void ht_insert(HashTable* ht, const char* word) {
     unsigned long idx = hash(word);
     Node* cur = ht->table[idx];
@@ -52,7 +49,6 @@ void ht_insert(HashTable* ht, const char* word) {
     ht->table[idx] = n;
 }
 
-// adiciona soma direta (pra merge)
 void ht_add(HashTable* ht, const char* key, int inc) {
     unsigned long idx = hash(key);
     Node* cur = ht->table[idx];
@@ -71,7 +67,6 @@ void ht_add(HashTable* ht, const char* key, int inc) {
     ht->table[idx] = n;
 }
 
-// libera memória
 void ht_free(HashTable* ht) {
     for (int i = 0; i < HASH_SIZE; i++) {
         Node* cur = ht->table[i];
@@ -81,7 +76,6 @@ void ht_free(HashTable* ht) {
     free(ht);
 }
 
-// normaliza palavra (minúsculas e mantém apóstrofos)
 void normalize(char* w) {
     int i=0, j=0;
     for (; w[i]; i++) {
@@ -91,7 +85,6 @@ void normalize(char* w) {
     w[j] = '\0';
 }
 
-// pega a 4ª coluna (lyrics) corretamente
 int extrair_letra(const char* linha, char* letra_out) {
     int aspas = 0, campo = 0;
     const char* start = NULL;
@@ -118,7 +111,6 @@ int extrair_letra(const char* linha, char* letra_out) {
     return 0;
 }
 
-// tokeniza e conta
 void process_lyrics(const char* lyrics, HashTable* ht) {
     char token[MAX_WORD];
     int t = 0;
@@ -161,7 +153,7 @@ int main(int argc, char** argv) {
     }
 
     char line[MAX_LINE];
-    fgets(line, MAX_LINE, f); // pula cabeçalho
+    fgets(line, MAX_LINE, f);
 
     HashTable* local = ht_create();
     int line_num = 0;
@@ -174,17 +166,14 @@ int main(int argc, char** argv) {
     }
     fclose(f);
 
-    // agregação
     if (rank == 0) {
         HashTable* global = ht_create();
 
-        // junta local
         for (int i = 0; i < HASH_SIZE; i++) {
             Node* cur = local->table[i];
             while (cur) { ht_add(global, cur->word, cur->count); cur = cur->next; }
         }
 
-        // recebe dos outros ranks
         for (int src = 1; src < size; src++) {
             int count;
             MPI_Recv(&count, 1, MPI_INT, src, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -197,7 +186,6 @@ int main(int argc, char** argv) {
             }
         }
 
-        // cria vetor p/ ordenar
         typedef struct { char* w; int c; } Pair;
         Pair* arr = malloc(100000 * sizeof(Pair));
         int n = 0;
@@ -211,7 +199,6 @@ int main(int argc, char** argv) {
             }
         }
 
-        // ordena decrescente
         for (int i = 0; i < n - 1; i++)
             for (int j = i + 1; j < n; j++)
                 if (arr[j].c > arr[i].c) {
