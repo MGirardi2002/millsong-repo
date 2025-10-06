@@ -1,0 +1,5 @@
+=== CLASSIFICAÇÃO DE SENTIMENTO ===
+Total de músicas analisadas: 10
+
+Positiva: 5 (50.0%)
+Negativa: 5 (50.0%)
