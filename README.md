@@ -93,3 +93,35 @@ make run_all NP=4
 ```
 make clean
 ```
+
+## 🔮 7️⃣ Classificação de Sentimento (Parte 3)
+
+Esta etapa utiliza **Python** e o modelo local de linguagem do **Ollama**  
+para classificar as letras das músicas em três categorias:
+
+- **Positiva**
+- **Negativa**
+- **Neutra**
+
+O script lê o arquivo `spotify_cleaned.csv`, envia as letras para o modelo local  
+e conta quantas músicas se enquadram em cada classe.
+
+---
+
+### ⚙️ Pré-requisitos
+
+1. Ter o **Ollama** instalado:  
+   Linux:
+   ```
+   curl -fsSL https://ollama.com/install.sh | sh
+   ```
+
+2. Baixar um modelo compatível (exemplo: `llama3`):  
+   ```bash
+   ollama pull llama3
+   ```
+
+ ## 🚀 Executando a classificação
+
+
+
