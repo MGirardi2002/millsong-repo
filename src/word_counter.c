@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #define HASH_SIZE 200003
 #define MAX_WORD 128
@@ -130,12 +132,32 @@ void process_lyrics(const char* lyrics, HashTable* ht) {
     }
 }
 
+long get_peak_ram_kb() {
+    FILE* f = fopen("/proc/self/status", "r");
+    if (!f) return -1;
+    char line[256];
+    long peak_ram = -1;
+    while (fgets(line, sizeof(line), f)) {
+        if (strncmp(line, "VmHWM:", 6) == 0) {
+            sscanf(line + 6, "%ld", &peak_ram);
+            break;
+        }
+    }
+    fclose(f);
+    return peak_ram;
+}
+
+
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
 
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    double start_time, end_time, local_elapsed;
+    MPI_Barrier(MPI_COMM_WORLD);
+    start_time = MPI_Wtime();
 
     if (argc < 2) {
         if (rank == 0)
@@ -204,10 +226,10 @@ int main(int argc, char** argv) {
                 if (arr[j].c > arr[i].c) {
                     Pair tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
                 }
-
-        printf("=====================================\n");
-        printf("     MPI WORD COUNTER (resultado final)\n");
-        printf("=====================================\n");
+        
+        printf("============================================\n");
+        printf("    MPI WORD COUNTER (resultado final)\n");
+        printf("============================================\n");
         printf("Top 10 palavras mais frequentes:\n\n");
         for (int i = 0; i < 10 && i < n; i++)
             printf("%2d. %-20s %d\n", i + 1, arr[i].w, arr[i].c);
@@ -229,6 +251,53 @@ int main(int argc, char** argv) {
                 cur = cur->next;
             }
         }
+    }
+
+    end_time = MPI_Wtime();
+    local_elapsed = end_time - start_time;
+
+    struct rusage usage;
+    getrusage(RUSAGE_SELF, &usage);
+    double local_cpu_time = (double)usage.ru_utime.tv_sec + (double)usage.ru_utime.tv_usec / 1e6 +
+                            (double)usage.ru_stime.tv_sec + (double)usage.ru_stime.tv_usec / 1e6;
+    long local_peak_ram = get_peak_ram_kb();
+
+    double max_elapsed;
+    MPI_Reduce(&local_elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    double* all_cpu_times = NULL;
+    long* all_peak_rams = NULL;
+    if (rank == 0) {
+        all_cpu_times = malloc(size * sizeof(double));
+        all_peak_rams = malloc(size * sizeof(long));
+    }
+
+    MPI_Gather(&local_cpu_time, 1, MPI_DOUBLE, all_cpu_times, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Gather(&local_peak_ram, 1, MPI_LONG, all_peak_rams, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        printf("\n============================================\n");
+        printf("    MÉTRICAS DE DESEMPENHO\n");
+        printf("============================================\n");
+        printf("Tempo de execução total: %.4f segundos\n", max_elapsed);
+
+        double total_cpu_time = 0;
+        long total_peak_ram = 0;
+        printf("\n--- Métricas por processo ---\n");
+        printf("Rank\tTempo de CPU (s)\tPico de RAM (MB)\n");
+        printf("----\t----------------\t----------------\n");
+        for (int i = 0; i < size; i++) {
+            printf("%-4d\t%-16.4f\t%-16.2f\n", i, all_cpu_times[i], (double)all_peak_rams[i] / 1024.0);
+            total_cpu_time += all_cpu_times[i];
+            total_peak_ram += all_peak_rams[i];
+        }
+        printf("--------------------------------------------\n");
+        printf("CPU Total Acumulado: %.4f segundos\n", total_cpu_time);
+        printf("RAM Total Agregada:  %.2f MB\n", (double)total_peak_ram / 1024.0);
+        printf("============================================\n");
+
+        free(all_cpu_times);
+        free(all_peak_rams);
     }
 
     ht_free(local);

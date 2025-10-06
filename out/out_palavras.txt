@@ -1,6 +1,6 @@
-=====================================
-     MPI WORD COUNTER (resultado final)
-=====================================
+============================================
+    MPI WORD COUNTER (resultado final)
+============================================
 Top 10 palavras mais frequentes:
 
  1. the                  498048
@@ -13,3 +13,18 @@ Top 10 palavras mais frequentes:
  8. my                   170997
  9. in                   167970
 10. it                   149445
+
+============================================
+    MÉTRICAS DE DESEMPENHO
+============================================
+Tempo de execução total: 4.4387 segundos
+
+--- Métricas por processo ---
+Rank	Tempo de CPU (s)	Pico de RAM (MB)
+----	----------------	----------------
+0   	2.3336          	42.51           
+1   	0.6611          	25.83           
+--------------------------------------------
+CPU Total Acumulado: 2.9947 segundos
+RAM Total Agregada:  68.34 MB
+============================================

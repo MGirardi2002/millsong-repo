@@ -13,3 +13,18 @@ Top 10 artistas com mais músicas:
  8. Alabama                        187
  9. Dean Martin                    186
 10. Chaka Khan                     186
+
+============================================
+    MÉTRICAS DE DESEMPENHO
+============================================
+Tempo de execução total: 1.9794 segundos
+
+--- Métricas por processo ---
+Rank	Tempo de CPU (s)	Pico de RAM (MB)
+----	----------------	----------------
+0   	0.2515          	16.89           
+1   	0.2519          	15.60           
+--------------------------------------------
+CPU Total Acumulado: 0.5034 segundos
+RAM Total Agregada:  32.48 MB
+============================================
