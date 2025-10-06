@@ -1,0 +1,15 @@
+============================================
+    MPI ARTIST COUNTER (resultado final)
+============================================
+Top 10 artistas com mais músicas:
+
+ 1. Donna Summer                   191
+ 2. Gordon Lightfoot               189
+ 3. Bob Dylan                      188
+ 4. George Strait                  188
+ 5. Reba Mcentire                  187
+ 6. Cher                           187
+ 7. Loretta Lynn                   187
+ 8. Alabama                        187
+ 9. Dean Martin                    186
+10. Chaka Khan                     186

@@ -8,14 +8,12 @@
 #define MAX_WORD 128
 #define MAX_LINE 16384
 
-// nó simples da hash
 typedef struct Node {
     char word[MAX_WORD];
     int count;
     struct Node* next;
 } Node;
 
-// tabela hash básica
 typedef struct {
     Node** table;
 } HashTable;
@@ -28,14 +26,14 @@ unsigned long hash(const char* str) {
     return h % HASH_SIZE;
 }
 
-// cria e inicializa hash
+// cria hash
 HashTable* ht_create() {
     HashTable* ht = malloc(sizeof(HashTable));
     ht->table = calloc(HASH_SIZE, sizeof(Node*));
     return ht;
 }
 
-// insere ou incrementa palavra
+// insere +1
 void ht_insert(HashTable* ht, const char* word) {
     unsigned long idx = hash(word);
     Node* cur = ht->table[idx];
@@ -54,35 +52,90 @@ void ht_insert(HashTable* ht, const char* word) {
     ht->table[idx] = n;
 }
 
+// adiciona soma direta (pra merge)
+void ht_add(HashTable* ht, const char* key, int inc) {
+    unsigned long idx = hash(key);
+    Node* cur = ht->table[idx];
+    while (cur) {
+        if (strcmp(cur->word, key) == 0) {
+            cur->count += inc;
+            return;
+        }
+        cur = cur->next;
+    }
+    Node* n = malloc(sizeof(Node));
+    strncpy(n->word, key, MAX_WORD - 1);
+    n->word[MAX_WORD - 1] = '\0';
+    n->count = inc;
+    n->next = ht->table[idx];
+    ht->table[idx] = n;
+}
+
 // libera memória
 void ht_free(HashTable* ht) {
     for (int i = 0; i < HASH_SIZE; i++) {
         Node* cur = ht->table[i];
-        while (cur) {
-            Node* tmp = cur->next;
-            free(cur);
-            cur = tmp;
-        }
+        while (cur) { Node* tmp = cur->next; free(cur); cur = tmp; }
     }
     free(ht->table);
     free(ht);
 }
 
-// quebra letra em palavras (tokens)
-void process_lyrics(char* lyrics, HashTable* ht) {
-    char token[MAX_WORD];
-    int t = 0;
-    for (int i = 0; lyrics[i]; i++) {
-        if (isalpha((unsigned char)lyrics[i])) {
-            token[t++] = tolower(lyrics[i]);
-            if (t >= MAX_WORD - 1) t = MAX_WORD - 2;
-        } else if (t > 0) {
-            token[t] = '\0';
-            ht_insert(ht, token);
-            t = 0;
+// normaliza palavra (minúsculas e mantém apóstrofos)
+void normalize(char* w) {
+    int i=0, j=0;
+    for (; w[i]; i++) {
+        unsigned char c = (unsigned char)w[i];
+        if (isalpha(c) || c=='\'') w[j++] = (char)tolower(c);
+    }
+    w[j] = '\0';
+}
+
+// pega a 4ª coluna (lyrics) corretamente
+int extrair_letra(const char* linha, char* letra_out) {
+    int aspas = 0, campo = 0;
+    const char* start = NULL;
+    for (int i = 0; linha[i]; i++) {
+        char c = linha[i];
+        if (c == '"') aspas = !aspas;
+        else if (c == ',' && !aspas) {
+            campo++;
+            if (campo == 3) { start = &linha[i + 1]; break; }
         }
     }
-    if (t > 0) { token[t] = '\0'; ht_insert(ht, token); }
+    if (!start) return -1;
+    while (*start && isspace((unsigned char)*start)) start++;
+    if (*start == '"') start++;
+    strncpy(letra_out, start, MAX_LINE - 1);
+    letra_out[MAX_LINE - 1] = '\0';
+    size_t len = strlen(letra_out);
+    if (len > 0) {
+        char* end = letra_out + len - 1;
+        while (end >= letra_out && (isspace((unsigned char)*end) || *end == '"')) {
+            *end = '\0'; end--;
+        }
+    }
+    return 0;
+}
+
+// tokeniza e conta
+void process_lyrics(const char* lyrics, HashTable* ht) {
+    char token[MAX_WORD];
+    int t = 0;
+    for (int i = 0;; i++) {
+        unsigned char c = (unsigned char)lyrics[i];
+        if (isalpha(c) || c == '\'') {
+            if (t < MAX_WORD - 1) token[t++] = (char)tolower(c);
+        } else {
+            if (t > 0) {
+                token[t] = '\0';
+                normalize(token);
+                if (token[0] != '\0') ht_insert(ht, token);
+                t = 0;
+            }
+        }
+        if (c == '\0') break;
+    }
 }
 
 int main(int argc, char** argv) {
@@ -113,29 +166,22 @@ int main(int argc, char** argv) {
     HashTable* local = ht_create();
     int line_num = 0;
 
-    // cada processo lê apenas linhas que pertencem ao seu rank (modo round-robin)
     while (fgets(line, MAX_LINE, f)) {
         if (line_num++ % size != rank) continue;
-
-        // pega a última coluna (letra)
-        char* last = strrchr(line, ',');
-        if (!last) continue;
-        last++;
-
-        process_lyrics(last, local);
+        char letra[MAX_LINE];
+        if (extrair_letra(line, letra) == 0)
+            process_lyrics(letra, local);
     }
     fclose(f);
 
-    // agregação simples no rank 0
+    // agregação
     if (rank == 0) {
         HashTable* global = ht_create();
-        // junta os locais do rank 0
+
+        // junta local
         for (int i = 0; i < HASH_SIZE; i++) {
             Node* cur = local->table[i];
-            while (cur) {
-                ht_insert(global, cur->word);
-                cur = cur->next;
-            }
+            while (cur) { ht_add(global, cur->word, cur->count); cur = cur->next; }
         }
 
         // recebe dos outros ranks
@@ -147,40 +193,41 @@ int main(int argc, char** argv) {
                 int wcount;
                 MPI_Recv(word, MAX_WORD, MPI_CHAR, src, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 MPI_Recv(&wcount, 1, MPI_INT, src, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                for (int k = 0; k < wcount; k++) ht_insert(global, word);
+                ht_add(global, word, wcount);
             }
         }
 
-        // exibe top 10
-        printf("\\nTop 10 palavras mais frequentes:\\n");
-
-        // transforma em vetor pra ordenar
+        // cria vetor p/ ordenar
         typedef struct { char* w; int c; } Pair;
-        Pair* arr = malloc(50000 * sizeof(Pair));
+        Pair* arr = malloc(100000 * sizeof(Pair));
         int n = 0;
         for (int i = 0; i < HASH_SIZE; i++) {
             Node* cur = global->table[i];
-            while (cur && n < 50000) {
+            while (cur && n < 100000) {
                 arr[n].w = cur->word;
                 arr[n].c = cur->count;
                 n++;
                 cur = cur->next;
             }
         }
-        for (int i = 0; i < n - 1; i++) {
-            for (int j = i + 1; j < n; j++) {
+
+        // ordena decrescente
+        for (int i = 0; i < n - 1; i++)
+            for (int j = i + 1; j < n; j++)
                 if (arr[j].c > arr[i].c) {
                     Pair tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
                 }
-            }
-        }
+
+        printf("=====================================\n");
+        printf("     MPI WORD COUNTER (resultado final)\n");
+        printf("=====================================\n");
+        printf("Top 10 palavras mais frequentes:\n\n");
         for (int i = 0; i < 10 && i < n; i++)
-            printf("%2d. %-20s %d\\n", i + 1, arr[i].w, arr[i].c);
+            printf("%2d. %-20s %d\n", i + 1, arr[i].w, arr[i].c);
 
         free(arr);
         ht_free(global);
     } else {
-        // envia dados do processo pro rank 0
         int total = 0;
         for (int i = 0; i < HASH_SIZE; i++) {
             Node* cur = local->table[i];
