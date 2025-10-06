@@ -118,3 +118,9 @@ e conta quantas músicas se enquadram em cada classe.
    ```
 
  ## 🚀 Executando a classificação
+
+  Rodar no terminal:
+  ```bash
+   python3 src/sentiment.py
+   ```
+
