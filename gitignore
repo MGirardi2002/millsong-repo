@@ -1,0 +1,21 @@
+# Python virtual environment
+.venv/
+venv/
+
+# MPI executáveis e binários
+src/word_counter
+src/artist_counter
+src/spotify_analyzer
+
+# Resultados de saída
+out/
+*.txt
+*.csv~
+*.log
+
+# Arquivos temporários do sistema
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+Thumbs.db
